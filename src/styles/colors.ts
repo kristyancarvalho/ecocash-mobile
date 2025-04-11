@@ -12,6 +12,7 @@ export const colors = {
     green: {
       dark: "rgba(18, 159, 81, 0.2)",
       base: "#1ADB71",
+      aqua: "#18DBB1"
     },
   
     red: {
