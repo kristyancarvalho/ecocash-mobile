@@ -1,7 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import { BottomNavigation } from "react-native-paper";
 import { useRouter, usePathname } from "expo-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { colors } from "@/styles/colors";
 import { 
   IconHome, 
@@ -10,6 +10,7 @@ import {
   IconSearch, 
   IconSettings
 } from '@tabler/icons-react-native';
+
 export interface NavigationRoute {
   title: string;
   href: string;
@@ -44,58 +45,18 @@ const navigationRoutes: NavigationRoute[] = [
   },
 ];
 
-export function BottomNavigationBar() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const currentRouteIndex = navigationRoutes.findIndex(
-      (route) => route.href === pathname
-    );
-    if (currentRouteIndex !== -1) {
-      setIndex(currentRouteIndex);
-    }
-  }, [pathname]);
-
-  const routes = navigationRoutes.map((route) => ({
-    key: route.href,
-    title: route.title,
-    focusedIcon: ({ color, size }: { color: string; size: number }) => {
-      const IconComponent = route.iconName;
-      return <IconComponent size={size} color={color} />;
-    },
-    unfocusedIcon: ({ color, size }: { color: string; size: number }) => {
-      const IconComponent = route.iconName;
-      return <IconComponent size={size} color={color} />;
-    },
-  }));
-
-  const handleIndexChange = (newIndex: number) => {
-    setIndex(newIndex);
-    router.push(navigationRoutes[newIndex].href as any);
-  };
-
-  const renderScene = () => null;
-
-  return (
-    <View style={styles.container}>
-      <BottomNavigation
-        navigationState={{ index, routes }}
-        onIndexChange={handleIndexChange}
-        renderScene={renderScene}
-        barStyle={styles.bar}
-        activeColor={colors.green.base}
-        inactiveColor={colors.whiteShades[400]}
-        shifting={false} 
-        compact={true}
-        safeAreaInsets={{ bottom: 10 }}
-        activeIndicatorStyle={{ backgroundColor: colors.green.dark }}
-        theme={{ colors: { secondaryContainer: colors.green.dark } }}
-      />
-    </View>
-  );
-}
+const routes = navigationRoutes.map((route) => ({
+  key: route.href,
+  title: route.title,
+  focusedIcon: ({ color, size }: { color: string; size: number }) => {
+    const IconComponent = route.iconName;
+    return <IconComponent size={size} color={color} />;
+  },
+  unfocusedIcon: ({ color, size }: { color: string; size: number }) => {
+    const IconComponent = route.iconName;
+    return <IconComponent size={size} color={color} />;
+  },
+}));
 
 const styles = StyleSheet.create({
   container: {
@@ -115,4 +76,63 @@ const styles = StyleSheet.create({
     height: 70,
     paddingHorizontal: 10
   },
+});
+
+let lastNavigationTime = 0;
+
+export const BottomNavigationBar = memo(() => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [index, setIndex] = useState(() => {
+    const initialIndex = navigationRoutes.findIndex(
+      (route) => route.href === pathname
+    );
+    return initialIndex !== -1 ? initialIndex : 0;
+  });
+
+  useEffect(() => {
+    const currentRouteIndex = navigationRoutes.findIndex(
+      (route) => route.href === pathname
+    );
+    if (currentRouteIndex !== -1 && currentRouteIndex !== index) {
+      setIndex(currentRouteIndex);
+    }
+  }, [pathname]);
+
+  const handleIndexChange = useCallback((newIndex: number) => {
+    if (newIndex === index) return;
+    
+    const now = Date.now();
+    if (now - lastNavigationTime < 300) {
+      return;
+    }
+    lastNavigationTime = now;
+    
+    const route = navigationRoutes[newIndex].href;
+    setIndex(newIndex);
+    
+    setTimeout(() => {
+      router.push(route as any);
+    }, 10);
+  }, [index, router]);
+
+  const renderScene = useCallback(() => null, []);
+
+  return (
+    <View style={styles.container}>
+      <BottomNavigation
+        navigationState={{ index, routes }}
+        onIndexChange={handleIndexChange}
+        renderScene={renderScene}
+        barStyle={styles.bar}
+        activeColor={colors.green.base}
+        inactiveColor={colors.whiteShades[400]}
+        shifting={false}
+        compact={true}
+        safeAreaInsets={{ bottom: 10 }}
+        activeIndicatorStyle={{ backgroundColor: colors.green.dark }}
+        theme={{ colors: { secondaryContainer: colors.green.dark } }}
+      />
+    </View>
+  );
 });

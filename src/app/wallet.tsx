@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback, memo } from "react";
 import { BottomNavigationBar } from "@/components/bottom-navigation-bar";
 import { CustomButton } from "@/components/button";
 import { CustomTextInput } from "@/components/text-input";
@@ -8,38 +8,238 @@ import { fontFamily } from "@/styles/font-family";
 import { View, Text, Image, Modal, Alert } from "react-native";
 import { getUserById, updateUser } from "@/firebase/firestore";
 import { auth } from "@/firebase/config";
+import { useFocusEffect } from '@react-navigation/native';
+
+let cachedUserPoints = {
+    userId: '',
+    points: 0,
+    lastFetched: 0
+};
+
+const Header = memo(() => (
+    <View
+        style={{
+            alignItems: "center",
+            flexDirection: "row",
+            gap: 20,
+            justifyContent: "center"
+        }}
+    >
+        <Image 
+            style={{width: 80, height: 80}}
+            source={require("../../assets/icons/coin.png")}  
+        />
+
+        <View>
+            <Text
+                style={{
+                    fontSize: 24,
+                    fontFamily: fontFamily.bold,
+                    color: "#000"
+                }}
+            >
+                Carteira Virtual
+            </Text>
+            <Text
+                style={{
+                    fontSize: 14,
+                    fontFamily: fontFamily.regular,
+                    color: "#000",
+                    opacity: 0.7,
+                    width: 200,
+                }}
+            >
+                Troque seus pontos por incríveis recompensas!
+            </Text>
+        </View>
+    </View>
+));
+
+const PointsDisplay = memo(({ userPoints, loading }: { userPoints: number, loading: boolean }) => (
+    <>
+        <View style={{
+            width: "100%",
+            alignItems: "center",
+        }}>
+            <Text
+                style={{
+                    fontSize: 18,
+                    fontFamily: fontFamily.semiBold,
+                    color: "#000",
+                    textAlign: "center"
+                }}
+            >
+                Obrigada pela sua contribuição!
+            </Text>
+            <Text
+                style={{
+                    fontSize: 16,
+                    fontFamily: fontFamily.regular,
+                    color: "#000",
+                    marginTop: 18
+                }}
+            >
+                Seu saldo atual:
+            </Text>
+        </View>
+        <View
+            style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10
+            }}
+        >
+            <Image 
+                source={require("../../assets/icons/coin-icon.png")}
+                style={{width: 40, height: 40}}
+            />
+            <Text
+                style={{
+                    fontSize: 32,
+                    fontFamily: fontFamily.bold,
+                    color: "#000"
+                }}
+            >
+                {loading ? "..." : userPoints}
+            </Text>
+        </View>
+    </>
+));
+
+const RedemptionModal = memo(({ visible, onClose }: { visible: boolean, onClose: () => void }) => (
+    <Modal
+        animationType="slide"
+        transparent={true}
+        visible={visible}
+        onRequestClose={onClose}
+    >
+        <View 
+            style={{
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "rgba(0, 0, 0, 0.5)"
+            }}
+        >
+            <View 
+                style={{
+                    width: "85%",
+                    backgroundColor: "white",
+                    borderRadius: 16,
+                    padding: 25,
+                    alignItems: "center",
+                    shadowColor: "#000",
+                    shadowOffset: {
+                        width: 0,
+                        height: 2
+                    },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 4,
+                    elevation: 5
+                }}
+            >
+                <Text
+                    style={{
+                        fontSize: 22,
+                        fontFamily: fontFamily.semiBold,
+                        color: "#000",
+                        marginBottom: 20
+                    }}
+                >
+                    Vale-Ponto
+                </Text>
+                
+                <Image
+                    source={require("../../assets/icons/qr-code.png")}
+                    style={{
+                        width: 124,
+                        height: 124,
+                        marginBottom: 20
+                    }}
+                />
+                
+                <Text
+                    style={{
+                        fontFamily: fontFamily.regular,
+                        fontSize: 16,
+                        textAlign: "center",
+                        color: "#ACACAC",
+                        marginBottom: 20
+                    }}
+                >
+                    Agora, basta scanear e mostrar seu vale-ponto na cantina.
+                    {"\n"}
+                    O planeta agradece!
+                </Text>
+                
+                <CustomButton
+                    onPress={onClose}
+                    title="Voltar"
+                    style={{
+                        width: "100%",
+                        backgroundColor: colors.green.aqua
+                    }}
+                    rippleColor="rgba(255, 255, 255, 0.6)"
+                />
+            </View>
+        </View>
+    </Modal>
+));
 
 export default function Wallet() {
     const [points, setPoints] = useState("");
     const [redeemValue, setRedeemValue] = useState("0,00");
     const [modalVisible, setModalVisible] = useState(false);
-    const [userPoints, setUserPoints] = useState(0);
-    const [loading, setLoading] = useState(true);
+    const [userPoints, setUserPoints] = useState(cachedUserPoints.points || 0);
+    const [loading, setLoading] = useState(cachedUserPoints.points === 0);
 
-    useEffect(() => {
-        fetchUserPoints();
-    }, []);
+    const fetchUserPoints = useCallback(async (forceRefresh = false) => {
+        const currentUser = auth.currentUser;
+        if (!currentUser) return;
 
-    const fetchUserPoints = async () => {
+        const now = Date.now();
+        const cacheValid = 
+            cachedUserPoints.userId === currentUser.uid && 
+            (now - cachedUserPoints.lastFetched) < 5 * 60 * 1000;
+
+        if (!forceRefresh && cacheValid) {
+            setUserPoints(cachedUserPoints.points);
+            setLoading(false);
+            return;
+        }
+
         try {
-            setLoading(true);
-            const currentUser = auth.currentUser;
+            if (forceRefresh) {
+                setLoading(true);
+            }
             
-            if (currentUser) {
-                const userData = await getUserById(currentUser.uid);
-                if (userData) {
-                    setUserPoints(userData.pontosAtuais);
-                }
+            const userData = await getUserById(currentUser.uid);
+            if (userData) {
+                setUserPoints(userData.pontosAtuais);
+                
+                cachedUserPoints = {
+                    userId: currentUser.uid,
+                    points: userData.pontosAtuais,
+                    lastFetched: now
+                };
             }
         } catch (error) {
             console.error("Error fetching user points:", error);
-            Alert.alert("Erro", "Não foi possível carregar seus pontos. Tente novamente.");
+            if (forceRefresh) {
+                Alert.alert("Erro", "Não foi possível carregar seus pontos. Tente novamente.");
+            }
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const handlePointsChange = (value: string) => {
+    useFocusEffect(
+        useCallback(() => {
+            fetchUserPoints();
+        }, [fetchUserPoints])
+    );
+
+    const handlePointsChange = useCallback((value: string) => {
         const numericValue = value.replace(/[^0-9]/g, "");
         
         if (numericValue && parseInt(numericValue) > userPoints) {
@@ -58,9 +258,9 @@ export default function Wallet() {
         } else {
             setRedeemValue("0,00");
         }
-    };
+    }, [userPoints]);
 
-    const handleRedeem = async () => {
+    const handleRedeem = useCallback(async () => {
         try {
             const pointsToRedeem = parseInt(points);
             
@@ -80,20 +280,24 @@ export default function Wallet() {
                     pontosAtuais: userPoints - pointsToRedeem
                 });
                 
-                setUserPoints(userPoints - pointsToRedeem);
+                const newPoints = userPoints - pointsToRedeem;
+                setUserPoints(newPoints);
+                cachedUserPoints.points = newPoints;
+                cachedUserPoints.lastFetched = Date.now();
+                
                 setModalVisible(true);
             }
         } catch (error) {
             console.error("Error redeeming points:", error);
             Alert.alert("Erro", "Não foi possível resgatar seus pontos. Tente novamente.");
         }
-    };
+    }, [points, userPoints]);
 
-    const closeModal = () => {
+    const closeModal = useCallback(() => {
         setModalVisible(false);
         setPoints("");
         setRedeemValue("0,00");
-    };
+    }, []);
 
     return(
         <>
@@ -107,42 +311,7 @@ export default function Wallet() {
                     gap: 20
                 }}
             >
-                <View
-                    style={{
-                        alignItems: "center",
-                        flexDirection: "row",
-                        gap: 20,
-                        justifyContent: "center"
-                    }}
-                >
-                    <Image 
-                        style={{width: 80, height: 80}}
-                        source={require("../../assets/icons/coin.png")}  
-                    />
-
-                    <View>
-                        <Text
-                            style={{
-                                fontSize: 24,
-                                fontFamily: fontFamily.bold,
-                                color: "#000"
-                            }}
-                        >
-                            Carteira Virtual
-                        </Text>
-                        <Text
-                            style={{
-                                fontSize: 14,
-                                fontFamily: fontFamily.regular,
-                                color: "#000",
-                                opacity: 0.7,
-                                width: 200,
-                            }}
-                        >
-                            Troque seus pontos por incríveis recompensas!
-                        </Text>
-                    </View>
-                </View>
+                <Header />
 
                 <View
                     style={{
@@ -155,52 +324,7 @@ export default function Wallet() {
                         gap: 10
                     }}
                 >
-                    <View style={{
-                        width: "100%",
-                        alignItems: "center",
-                    }}>
-                        <Text
-                            style={{
-                                fontSize: 18,
-                                fontFamily: fontFamily.semiBold,
-                                color: "#000",
-                                textAlign: "center"
-                            }}
-                        >
-                            Obrigada pela sua contribuição!
-                        </Text>
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                fontFamily: fontFamily.regular,
-                                color: "#000",
-                                marginTop: 18
-                            }}
-                        >
-                            Seu saldo atual:
-                        </Text>
-                    </View>
-                    <View
-                        style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 10
-                        }}
-                    >
-                        <Image 
-                            source={require("../../assets/icons/coin-icon.png")}
-                            style={{width: 40, height: 40}}
-                        />
-                        <Text
-                            style={{
-                                fontSize: 32,
-                                fontFamily: fontFamily.bold,
-                                color: "#000"
-                            }}
-                        >
-                            {loading ? "..." : userPoints}
-                        </Text>
-                    </View>
+                    <PointsDisplay userPoints={userPoints} loading={loading} />
 
                     <Text
                         style={{
@@ -246,86 +370,9 @@ export default function Wallet() {
                 </View>
             </View>
 
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={closeModal}
-            >
-                <View 
-                    style={{
-                        flex: 1,
-                        justifyContent: "center",
-                        alignItems: "center",
-                        backgroundColor: "rgba(0, 0, 0, 0.5)"
-                    }}
-                >
-                    <View 
-                        style={{
-                            width: "85%",
-                            backgroundColor: "white",
-                            borderRadius: 16,
-                            padding: 25,
-                            alignItems: "center",
-                            shadowColor: "#000",
-                            shadowOffset: {
-                                width: 0,
-                                height: 2
-                            },
-                            shadowOpacity: 0.25,
-                            shadowRadius: 4,
-                            elevation: 5
-                        }}
-                    >
-                        <Text
-                            style={{
-                                fontSize: 22,
-                                fontFamily: fontFamily.semiBold,
-                                color: "#000",
-                                marginBottom: 20
-                            }}
-                        >
-                            Vale-Ponto
-                        </Text>
-                        
-                        <Image
-                            source={require("../../assets/icons/qr-code.png")}
-                            style={{
-                                width: 124,
-                                height: 124,
-                                marginBottom: 20
-                            }}
-                        />
-                        
-                        <Text
-                            style={{
-                                fontFamily: fontFamily.regular,
-                                fontSize: 16,
-                                textAlign: "center",
-                                color: "#ACACAC",
-                                marginBottom: 20
-                            }}
-                        >
-                            Agora, basta scanear e mostrar seu vale-ponto na cantina.
-                            {"\n"}
-                            O planeta agradece!
-                        </Text>
-                        
-                        <CustomButton
-                            onPress={closeModal}
-                            title="Voltar"
-                            style={{
-                                width: "100%",
-                                backgroundColor: colors.green.aqua
-                            }}
-                            rippleColor="rgba(255, 255, 255, 0.6)"
-                        />
-                    </View>
-                </View>
-            </Modal>
+            <RedemptionModal visible={modalVisible} onClose={closeModal} />
             <TopNavigationBar />
-
             <BottomNavigationBar />
         </>
-    )
+    );
 }
