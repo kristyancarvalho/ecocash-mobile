@@ -8,6 +8,8 @@ import { auth } from "@/firebase/config";
 import { BottomNavigationBar } from "@/components/bottom-navigation-bar";
 import { TopNavigationBar } from "@/components/top-navigation-bar";
 
+let userDataCache: User | null = null;
+
 interface InfoItemTypes {
     title: string,
     content: string,
@@ -65,10 +67,17 @@ export default function Home() {
                     return;
                 }
                 
+                if (userDataCache) {
+                    setUserData(userDataCache);
+                    setLoading(false);
+                    return;
+                }
+                
                 const user = await getUserById(currentUser.uid);
+                
+                userDataCache = user;
                 setUserData(user);
             } catch (err) {
-                console.error("Erro ao carregar dados do usuário:", err);
                 setError("Falha ao carregar dados do usuário");
             } finally {
                 setLoading(false);
