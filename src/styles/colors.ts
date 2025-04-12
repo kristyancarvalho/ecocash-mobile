@@ -14,6 +14,12 @@ export const colors = {
       base: "#1ADB71",
       aqua: "#18DBB1"
     },
+
+    podium: {
+      first: "#FFD400",
+      second: "#ACACAC",
+      third: "#FA9547"
+    },
   
     red: {
       light: "#FDEDED",
