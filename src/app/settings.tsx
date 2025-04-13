@@ -111,7 +111,7 @@ const SettingsSection = memo(({ title, children }: { title: string, children: Re
   }}>
     <Text style={{
       fontSize: 16,
-      fontFamily: fontFamily.semiBold,
+      fontFamily: fontFamily.regular,
       color: "#666",
       marginBottom: 10,
       paddingHorizontal: 10,
@@ -120,7 +120,7 @@ const SettingsSection = memo(({ title, children }: { title: string, children: Re
     </Text>
     <View style={{
       backgroundColor: "#fff",
-      borderRadius: 16,
+      borderRadius: 8,
       overflow: "hidden",
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
