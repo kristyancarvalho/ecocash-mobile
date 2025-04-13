@@ -39,7 +39,7 @@ const Header = memo(() => (
         fontFamily: fontFamily.bold,
         color: "#000"
       }}>
-        Consulta de Pontos
+        Consulta
       </Text>
       <Text style={{
         fontSize: 14,
