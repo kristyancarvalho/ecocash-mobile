@@ -8,7 +8,10 @@ export function Welcome() {
 
     return (
         <View style={s.container}>
-            <Image source={require("../../../assets/logo.png")} />
+            <Image
+                style={{width: 150, height: 100}}
+                source={require("../../../assets/logo.png")} 
+            />
             
             <Text style={s.title}>Bem vindo ao EcoCash!</Text>
 

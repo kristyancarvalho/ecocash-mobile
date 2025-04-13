@@ -103,8 +103,9 @@ export default function Login() {
                     gap: 10
                 }}
             >
-                <Image 
-                    source={require("../../assets/logo.png")}
+                <Image
+                    style={{width: 150, height: 100}}
+                    source={require("../../assets/logo.png")} 
                 />
                 <Text
                     style={{

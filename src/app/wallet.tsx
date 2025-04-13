@@ -167,7 +167,7 @@ const RedemptionModal = memo(({ visible, onClose }: { visible: boolean, onClose:
                         marginBottom: 20
                     }}
                 >
-                    Agora, basta scanear e mostrar seu vale-ponto na cantina.
+                    Agora, basta escanear e mostrar seu vale-ponto na cantina.
                     {"\n"}
                     O planeta agradece!
                 </Text>
