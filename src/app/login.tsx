@@ -11,6 +11,7 @@ import { router } from "expo-router"
 import { FirebaseError } from "firebase/app"
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useAuth } from "@/contexts/authContext"
+import { TouchableRipple } from "react-native-paper"
 
 export default function Login() {
     const [ra, setRa] = useState("")
@@ -155,18 +156,21 @@ export default function Login() {
                         disabled={loading}
                     />
 
-                    <Text
-                        style={{
-                            fontFamily: fontFamily.regular,
-                            fontSize: 14,
-                            color: colors.green.base,
-                            textAlign: "right",
-                            marginTop: 4
-                        }}
-                        onPress={() => router.push("/")}
+                    <TouchableRipple
+                        onPress={() => {router.push("/forgot-password")}}
                     >
-                        Esqueceu sua senha?
-                    </Text>
+                        <Text
+                            style={{
+                                fontFamily: fontFamily.regular,
+                                fontSize: 14,
+                                color: colors.green.base,
+                                textAlign: "right",
+                                marginTop: 4
+                            }}
+                        >
+                            Esqueceu sua senha?
+                        </Text>
+                    </TouchableRipple>
                 </View>
 
                 <CustomButton 
