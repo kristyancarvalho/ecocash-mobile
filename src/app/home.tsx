@@ -2,7 +2,7 @@ import { colors } from "@/styles/colors";
 import { fontFamily } from "@/styles/font-family";
 import { Image, View, Text, DimensionValue, ActivityIndicator, StatusBar, RefreshControl, ScrollView } from "react-native";
 import { Surface } from "react-native-paper";
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useCallback, memo } from "react";
 import { getUserById, User } from "@/firebase/firestore";
 import { auth } from "@/firebase/config";
 import { BottomNavigationBar } from "@/components/bottom-navigation-bar";

@@ -32,7 +32,7 @@ export function CustomTextInput({
         color: "#000"
       }}
       placeholderTextColor="#C4C4C4"
-      selectionColor={colors.green.dark}
+      selectionColor={colors.green.transparent}
       theme={{
         colors: {
           onSurfaceVariant: "#C4C4C4",
