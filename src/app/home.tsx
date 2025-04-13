@@ -1,6 +1,6 @@
 import { colors } from "@/styles/colors";
 import { fontFamily } from "@/styles/font-family";
-import { Image, View, Text, DimensionValue, ActivityIndicator, StatusBar } from "react-native";
+import { Image, View, Text, DimensionValue, ActivityIndicator, StatusBar, RefreshControl, ScrollView } from "react-native";
 import { Surface } from "react-native-paper";
 import { useState, useEffect, useCallback, memo } from "react";
 import { getUserById, User } from "@/firebase/firestore";
@@ -169,18 +169,20 @@ export default function Home() {
     const [userData, setUserData] = useState<User | null>(userDataCache);
     const [loading, setLoading] = useState(!userDataCache);
     const [error, setError] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
 
-    const fetchUserData = useCallback(async () => {
-        if (userDataCache) {
+    const fetchUserData = useCallback(async (forceRefresh = false) => {
+        if (userDataCache && !forceRefresh) {
             setUserData(userDataCache);
             setLoading(false);
-            
-            refreshUserDataInBackground();
             return;
         }
         
         try {
-            setLoading(true);
+            if (!refreshing) {
+                setLoading(true);
+            }
+            
             const currentUser = auth.currentUser;
             
             if (!currentUser) {
@@ -191,66 +193,74 @@ export default function Home() {
             const user = await getUserById(currentUser.uid);
             userDataCache = user;
             setUserData(user);
+            setError(null);
         } catch (err) {
+            console.error("Error fetching user data:", err);
             setError("Falha ao carregar dados do usuário");
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
-    }, []);
+    }, [refreshing]);
 
-    const refreshUserDataInBackground = useCallback(async () => {
-        try {
-            const currentUser = auth.currentUser;
-            if (!currentUser) return;
-            
-            const user = await getUserById(currentUser.uid);
-            userDataCache = user;
-            setUserData(user);
-        } catch (err) {
-            console.error("Background refresh failed:", err);
-        }
-    }, []);
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        fetchUserData(true);
+    }, [fetchUserData]);
 
     useFocusEffect(
         useCallback(() => {
-            fetchUserData();
+            fetchUserData(false);
         }, [fetchUserData])
     );
 
     return (
         <>
             <StatusBar barStyle="light-content" backgroundColor={colors.green.base} />
-            <View
-                style={{
-                    flex: 1,
-                    backgroundColor: colors.whiteShades[200],
-                    justifyContent: "center",
-                    paddingHorizontal: 20
-                }}
+            <ScrollView
+                contentContainerStyle={{ flexGrow: 1 }}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={[colors.green.base]}
+                        tintColor={colors.green.base}
+                        progressBackgroundColor="#ffffff"
+                    />
+                }
             >
-                <Header />
-
-                <Surface
-                    elevation={1}
+                <View
                     style={{
-                        backgroundColor: "#FFF",
-                        width: "100%",
-                        borderRadius: 8,
-                        paddingVertical: 20,
-                        paddingHorizontal: 10,
-                        gap: 10,
-                        marginTop: 10
+                        flex: 1,
+                        backgroundColor: colors.whiteShades[200],
+                        justifyContent: "center",
+                        paddingHorizontal: 20
                     }}
                 >
-                    {loading ? (
-                        <LoadingState />
-                    ) : error ? (
-                        <ErrorState message={error} />
-                    ) : (
-                        <UserInfo userData={userData} />
-                    )}
-                </Surface>
-            </View>
+                    <Header />
+
+                    <Surface
+                        elevation={1}
+                        style={{
+                            backgroundColor: "#FFF",
+                            width: "100%",
+                            borderRadius: 8,
+                            paddingVertical: 20,
+                            paddingHorizontal: 10,
+                            gap: 10,
+                            marginTop: 10
+                        }}
+                    >
+                        {loading ? (
+                            <LoadingState />
+                        ) : error ? (
+                            <ErrorState message={error} />
+                        ) : (
+                            <UserInfo userData={userData} />
+                        )}
+                    </Surface>
+                </View>
+            </ScrollView>
             <TopNavigationBar />
             <BottomNavigationBar />
         </>

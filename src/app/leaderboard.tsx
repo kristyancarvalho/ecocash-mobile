@@ -3,7 +3,7 @@ import { BottomNavigationBar } from "@/components/bottom-navigation-bar";
 import { TopNavigationBar } from "@/components/top-navigation-bar";
 import { colors } from "@/styles/colors";
 import { fontFamily } from "@/styles/font-family";
-import { View, Text, Image, ActivityIndicator } from "react-native";
+import { View, Text, Image, ActivityIndicator, ScrollView, RefreshControl } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase/config';
@@ -257,73 +257,85 @@ export default function Leaderboard() {
   const [leaderboardData, setLeaderboardData] = useState<User[]>(leaderboardCache || []);
   const [loading, setLoading] = useState(!leaderboardCache);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   
-  const loadLeaderboardData = useCallback(async () => {
-    if (leaderboardCache) {
+  const loadLeaderboardData = useCallback(async (forceRefresh = false) => {
+    if (leaderboardCache && !forceRefresh) {
       setLeaderboardData(leaderboardCache);
       setLoading(false);
-      
-      refreshLeaderboardInBackground();
       return;
     }
     
     try {
-      setLoading(true);
+      if (!refreshing) {
+        setLoading(true);
+      }
+      
       const users = await fetchLeaderboardData();
       leaderboardCache = users;
       setLeaderboardData(users);
+      setError(null);
     } catch (err) {
       setError("Falha ao carregar dados do ranking");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, []);
+  }, [refreshing]);
   
-  const refreshLeaderboardInBackground = useCallback(async () => {
-    try {
-      const users = await fetchLeaderboardData();
-      leaderboardCache = users;
-      setLeaderboardData(users);
-    } catch (err) {
-      console.error("Background refresh failed:", err);
-    }
-  }, []);
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadLeaderboardData(true);
+  }, [loadLeaderboardData]);
   
   useFocusEffect(
     useCallback(() => {
-      loadLeaderboardData();
+      loadLeaderboardData(false);
     }, [loadLeaderboardData])
   );
   
   return(
     <>
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: colors.whiteShades[100],
-          paddingHorizontal: 20,
-          gap: 20
-        }}
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.green.base]}
+            tintColor={colors.green.base}
+            progressBackgroundColor="#ffffff"
+          />
+        }
       >
-        <Header />
-        
-        {loading ? (
-          <LoadingState />
-        ) : error ? (
-          <ErrorState message={error} />
-        ) : leaderboardData.length === 0 ? (
-          <Text style={{ fontFamily: fontFamily.regular, textAlign: 'center' }}>
-            Nenhum usuário encontrado no ranking
-          </Text>
-        ) : (
-          <>
-            <Podium users={leaderboardData} />
-            <OtherPlaces users={leaderboardData} />
-          </>
-        )}
-      </View>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: colors.whiteShades[100],
+            paddingHorizontal: 20,
+            gap: 20
+          }}
+        >
+          <Header />
+          
+          {loading ? (
+            <LoadingState />
+          ) : error ? (
+            <ErrorState message={error} />
+          ) : leaderboardData.length === 0 ? (
+            <Text style={{ fontFamily: fontFamily.regular, textAlign: 'center' }}>
+              Nenhum usuário encontrado no ranking
+            </Text>
+          ) : (
+            <>
+              <Podium users={leaderboardData} />
+              <OtherPlaces users={leaderboardData} />
+            </>
+          )}
+        </View>
+      </ScrollView>
 
       <TopNavigationBar />
       <BottomNavigationBar />
