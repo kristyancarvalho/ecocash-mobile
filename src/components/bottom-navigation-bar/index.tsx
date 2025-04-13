@@ -130,8 +130,8 @@ export const BottomNavigationBar = memo(() => {
         shifting={false}
         compact={true}
         safeAreaInsets={{ bottom: 10 }}
-        activeIndicatorStyle={{ backgroundColor: colors.green.dark }}
-        theme={{ colors: { secondaryContainer: colors.green.dark } }}
+        activeIndicatorStyle={{ backgroundColor: colors.green.transparent }}
+        theme={{ colors: { secondaryContainer: colors.green.transparent } }}
       />
     </View>
   );

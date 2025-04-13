@@ -1,5 +1,3 @@
-import { transparent } from "react-native-paper/lib/typescript/styles/themes/v2/colors";
-
 export const colors = {
     whiteShades: {
       100: "#f1f1f1",
@@ -12,6 +10,7 @@ export const colors = {
     green: {
       dark: "rgba(18, 159, 81, 0.2)",
       base: "#1ADB71",
+      transparent: "rgba(26, 219, 113, 0.2)",
       aqua: "#18DBB1"
     },
 

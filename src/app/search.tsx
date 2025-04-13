@@ -267,6 +267,7 @@ export default function Search() {
                 value={searchTerm}
                 onChangeText={setSearchTerm}
                 onSubmitEditing={handleSearch}
+                selectionColor={colors.green.transparent}
               />
               <Button 
                 style={{
