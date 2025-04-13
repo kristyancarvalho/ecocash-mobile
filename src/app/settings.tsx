@@ -1,4 +1,4 @@
-import { memo, useState, useEffect } from "react";
+import { memo, useState, useEffect, useCallback } from "react";
 import { BottomNavigationBar } from "@/components/bottom-navigation-bar";
 import { TopNavigationBar } from "@/components/top-navigation-bar";
 import { colors } from "@/styles/colors";
@@ -10,8 +10,11 @@ import { User } from "@/firebase/firestore";
 import { useAuth } from "@/contexts/authContext";
 import { TouchableRipple } from "react-native-paper";
 import { IconPower } from "@tabler/icons-react-native";
+import { useFocusEffect } from '@react-navigation/native';
 
 const APP_VERSION = "1.0.0";
+
+let userDataCache: User | null = null;
 
 const ProfileHeader = memo(({ user }: { user: User | null }) => {
   const getInitials = () => {
@@ -161,31 +164,63 @@ const PointsInfo = memo(({ user }: { user: User | null }) => (
 ));
 
 export default function Settings() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(userDataCache);
+  const [loading, setLoading] = useState(!userDataCache);
+  const [error, setError] = useState<string | null>(null);
   const { logout } = useAuth();
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const currentUser = auth.currentUser;
-        if (currentUser) {
-          const userData = await getUserById(currentUser.uid);
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      } finally {
-        setLoading(false);
+  const fetchUserData = useCallback(async () => {
+    if (userDataCache) {
+      setUser(userDataCache);
+      setLoading(false);
+      
+      refreshUserDataInBackground();
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const currentUser = auth.currentUser;
+      
+      if (!currentUser) {
+        setError("Usuário não autenticado");
+        return;
       }
-    };
+      
+      const userData = await getUserById(currentUser.uid);
+      userDataCache = userData;
+      setUser(userData);
+    } catch (err) {
+      console.error("Error fetching user data:", err);
+      setError("Falha ao carregar dados do usuário");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-        fetchUserData();
-    }, []);
+  const refreshUserDataInBackground = useCallback(async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+      
+      const userData = await getUserById(currentUser.uid);
+      userDataCache = userData;
+      setUser(userData);
+    } catch (err) {
+      console.error("Background refresh failed:", err);
+    }
+  }, []);
 
-    const handleLogout = async () => {
-        await logout();
-    };
+  useFocusEffect(
+    useCallback(() => {
+      fetchUserData();
+    }, [fetchUserData])
+  );
+
+  const handleLogout = async () => {
+    userDataCache = null;
+    await logout();
+  };
 
   return(
     <>
@@ -216,52 +251,64 @@ export default function Settings() {
 
           <ProfileHeader user={user} />
           
-          <SettingsSection title="PONTUAÇÃO">
-            <PointsInfo user={user} />
-          </SettingsSection>
-          
-          <SettingsSection title="INFORMAÇÕES">
-            <View>
-              <Text style={{ 
-                fontSize: 14, 
-                fontFamily: fontFamily.regular 
-              }}>
-                Versão do aplicativo: {APP_VERSION}
-              </Text>
-            </View>
-          </SettingsSection>
-
-            <TouchableRipple
-                onPress={handleLogout}
-                style={{
-                    borderRadius: 16,
-                    overflow: "hidden",
-                }}
-                rippleColor={colors.whiteShades.transparent}
-            >
-                <View
-                    style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 10,
-                    }}
-                >
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            fontFamily: fontFamily.semiBold,
-                            color: colors.red.base,
-                        }}
-                    >
-                        Encerrar sessão
-                    </Text>
-                    <IconPower
-                        size={24}
-                        color={colors.red.base}
-                    />
+          {loading ? (
+            <Text style={{ textAlign: 'center', marginTop: 20, fontFamily: fontFamily.regular }}>
+              Carregando dados...
+            </Text>
+          ) : error ? (
+            <Text style={{ textAlign: 'center', marginTop: 20, color: "red", fontFamily: fontFamily.regular }}>
+              {error}
+            </Text>
+          ) : (
+            <>
+              <SettingsSection title="PONTUAÇÃO">
+                <PointsInfo user={user} />
+              </SettingsSection>
+              
+              <SettingsSection title="INFORMAÇÕES">
+                <View>
+                  <Text style={{ 
+                    fontSize: 14, 
+                    fontFamily: fontFamily.regular 
+                  }}>
+                    Versão do aplicativo: {APP_VERSION}
+                  </Text>
                 </View>
-            </TouchableRipple>
+              </SettingsSection>
+            </>
+          )}
+
+          <TouchableRipple
+            onPress={handleLogout}
+            style={{
+              borderRadius: 16,
+              overflow: "hidden",
+            }}
+            rippleColor={colors.whiteShades.transparent}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontFamily: fontFamily.semiBold,
+                  color: colors.red.base,
+                }}
+              >
+                Encerrar sessão
+              </Text>
+              <IconPower
+                size={24}
+                color={colors.red.base}
+              />
+            </View>
+          </TouchableRipple>
         </ScrollView>
       </View>
 
