@@ -207,7 +207,8 @@ export default function Settings() {
               fontSize: 24,
               fontFamily: fontFamily.bold,
               color: "#000",
-              marginBottom: 20,
+              marginTop: 20,
+              marginBottom: 20
             }}
           >
             Configurações
