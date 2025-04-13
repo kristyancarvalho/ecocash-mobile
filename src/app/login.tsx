@@ -156,21 +156,43 @@ export default function Login() {
                         disabled={loading}
                     />
 
-                    <TouchableRipple
-                        onPress={() => {router.push("/forgot-password")}}
+                    <View
+                        style={{
+                            flexDirection: "row",
+                            justifyContent: "space-between"
+                        }}
                     >
-                        <Text
-                            style={{
-                                fontFamily: fontFamily.regular,
-                                fontSize: 14,
-                                color: colors.green.base,
-                                textAlign: "right",
-                                marginTop: 4
-                            }}
+                        <TouchableRipple
+                            onPress={() => {router.push("/sign-up")}}
                         >
-                            Esqueceu sua senha?
-                        </Text>
-                    </TouchableRipple>
+                            <Text
+                                style={{
+                                    fontFamily: fontFamily.regular,
+                                    fontSize: 14,
+                                    color: colors.green.base,
+                                    textAlign: "right",
+                                    marginTop: 4
+                                }}
+                            >
+                                Cadastre-se
+                            </Text>
+                        </TouchableRipple>
+                        <TouchableRipple
+                            onPress={() => {router.push("/forgot-password")}}
+                        >
+                            <Text
+                                style={{
+                                    fontFamily: fontFamily.regular,
+                                    fontSize: 14,
+                                    color: colors.green.base,
+                                    textAlign: "right",
+                                    marginTop: 4
+                                }}
+                            >
+                                Esqueci a senha
+                            </Text>
+                        </TouchableRipple>
+                    </View>
                 </View>
 
                 <CustomButton 
